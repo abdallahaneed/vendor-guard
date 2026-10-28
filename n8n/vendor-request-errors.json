@@ -1,0 +1,62 @@
+{
+  "id": "VgErrorHandler01",
+  "name": "Vendor request errors",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": [],
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "02c47318-52d7-520a-a398-22520c55a80d",
+      "name": "Workflow failed",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "vendor-guard@example.com",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "=n8n: {{ $json.workflow.name }} failed",
+        "emailFormat": "text",
+        "text": "=Workflow: {{ $json.workflow.name }}\nExecution: {{ $json.execution.id }}\nNode: {{ $json.execution.lastNodeExecuted }}\nError: {{ $json.execution.error.message }}\n\nOpen: {{ $json.execution.url }}\n\nThe request may be stuck. Check the case list in vendor-guard.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "42a77893-b068-5969-865a-34ad0b112b40",
+      "name": "Mail admin",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        260,
+        300
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "VgSmtpMailpit001",
+          "name": "Mailpit SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Workflow failed": {
+      "main": [
+        [
+          {
+            "node": "Mail admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

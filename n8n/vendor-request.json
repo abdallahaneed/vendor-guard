@@ -1,0 +1,663 @@
+{
+  "id": "VgVendorRequest1",
+  "name": "Vendor request",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vendor-request",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "fc6cae9c-2aa5-5079-b7c3-a0f5e596a2f3",
+      "name": "Request in",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "28ce7a8a-5fb2-5671-90d1-c9b9cefe9125"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.VENDOR_GUARD_URL }}/api/v1/cases",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}"
+      },
+      "id": "6472d768-286d-5101-99fb-9649a66c926f",
+      "name": "Check request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VgApiKeyCred0001",
+          "name": "vendor-guard API key"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ caseId: $json.caseId, ref: $json.ref, status: $json.status, approvalsNeeded: $json.approvalsNeeded, risks: $json.risks.map(r => r.id + ' ' + r.title) }) }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "4efdf1ef-7c88-5f43-9f27-13c1d10073d9",
+      "name": "Reply 202",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        500,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: (() => { const m = $json.error?.message || ''; try { return JSON.parse(JSON.parse(m.slice(m.indexOf(' - ') + 3))).error.message } catch (e) { return m || 'request could not be checked' } })() }) }}",
+        "options": {
+          "responseCode": "={{ /^4\\d\\d/.test($json.error?.message || '') ? 422 : 502 }}"
+        }
+      },
+      "id": "d9b34e8e-1d72-5e81-98a5-207e4fbd8ab6",
+      "name": "Reply error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        500,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ae3e58d8-096f-5fb7-b704-ebfa0705b503",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "approved",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "approved"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f22b88f2-5c3a-5a98-83ce-be8d7b11a44d",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "rejected",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "rejected"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8c081e8c-083e-5fd5-b44b-c8a7c3b34035",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "pending_approval",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pending_approval"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f65900ad-adae-56d7-9bbf-95fbd591e902",
+      "name": "Route by status",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        740,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "vendor-guard@example.com",
+        "toEmail": "={{ $('Check request').first().json.requester }}",
+        "subject": "={{ $('Check request').first().json.ref }} vendor approved without review",
+        "emailFormat": "text",
+        "text": "={{ $('Check request').first().json.emailText }}\n\nNo checks failed. Export file: {{ $('Check request').first().json.exportFile }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "0a8dbfea-c44e-58af-be2b-3bf271b15666",
+      "name": "Mail requester: created",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1000,
+        0
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "VgSmtpMailpit001",
+          "name": "Mailpit SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "vendor-guard@example.com",
+        "toEmail": "={{ $('Check request').first().json.requester }}",
+        "subject": "={{ $('Check request').first().json.ref }} rejected by the checks",
+        "emailFormat": "text",
+        "text": "={{ $('Check request').first().json.emailText }}\n\nFix the blockers above and send the request again.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "0e624aac-8816-52f3-a0c2-47d83eef8d99",
+      "name": "Mail requester: rejected",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1000,
+        180
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "VgSmtpMailpit001",
+          "name": "Mailpit SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.VENDOR_GUARD_URL }}/api/v1/cases/{{ $json.caseId }}/resume-url",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ url: $execution.resumeUrl }) }}"
+      },
+      "id": "9b55c0ce-08ff-51f7-bef7-5fd4dab2a9f8",
+      "name": "Register resume URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        380
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VgApiKeyCred0001",
+          "name": "vendor-guard API key"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify($('Check request').first().json) }}",
+        "options": {}
+      },
+      "id": "c4d8505d-2a56-5e09-b74b-8f68f3823011",
+      "name": "Case again",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1240,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "approvalLinks",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "id": "7141a801-d605-5908-8eee-2a3478aa3c3e",
+      "name": "One item per approver",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1480,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "vendor-guard@example.com",
+        "toEmail": "={{ $json.approvalLinks.approver }}",
+        "subject": "={{ $json.ref }} needs your approval: {{ $json.type.replace('_', ' ') }}",
+        "emailFormat": "text",
+        "text": "={{ $json.emailText }}\n\nOpen your personal link to decide (valid 48 hours, works once):\n{{ $json.approvalLinks.url }}\n\nFor a bank change: call the vendor on the number shown on that page, never the number in the letter.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "fa8832fe-c3e8-5a6a-b7f3-fb1c52f4fe6a",
+      "name": "Mail approver",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1720,
+        380
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "VgSmtpMailpit001",
+          "name": "Mailpit SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "maxItems": 1
+      },
+      "id": "4baf4cf7-6f37-59f5-9875-525eec928398",
+      "name": "Wait only once",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1960,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "limitWaitTime": true,
+        "limitType": "afterTimeInterval",
+        "resumeAmount": 48,
+        "resumeUnit": "hours",
+        "options": {}
+      },
+      "id": "f39d54f9-18fd-5925-9c9a-d39ce634ab8f",
+      "name": "Wait for decision",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        380
+      ],
+      "webhookId": "25ffe2be-f763-52d9-b318-f7bf5266cf06"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6f1b1ba0-dd1e-5c03-af39-dd6e4e608671",
+                    "leftValue": "={{ $json.body?.status ?? 'timeout' }}",
+                    "rightValue": "approved",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "approved"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0ab045f3-eca5-573b-a766-3416da68e42d",
+                    "leftValue": "={{ $json.body?.status ?? 'timeout' }}",
+                    "rightValue": "rejected",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "rejected"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "no decision"
+        }
+      },
+      "id": "61eeda12-1c6a-54e5-9ced-1e17bfac09b0",
+      "name": "Decision",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2440,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "vendor-guard@example.com",
+        "toEmail": "={{ $('Check request').first().json.requester }}",
+        "subject": "={{ $('Check request').first().json.ref }} approved",
+        "emailFormat": "text",
+        "text": "={{ $('Check request').first().json.ref }} was approved by {{ $json.body.decisions.filter(d => d.decision === 'approve').map(d => d.approver).join(', ') }}.\nExport file for the master data upload: {{ $json.body.exportFile }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a80703d2-725e-5389-b1c7-7ea2b2ef81a2",
+      "name": "Mail requester: approved",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2700,
+        220
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "VgSmtpMailpit001",
+          "name": "Mailpit SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "vendor-guard@example.com",
+        "toEmail": "={{ $('Check request').first().json.requester }}",
+        "subject": "={{ $('Check request').first().json.ref }} rejected",
+        "emailFormat": "text",
+        "text": "={{ $('Check request').first().json.ref }} was rejected.\n\n{{ $json.body.decisions.map(d => d.approver + ': ' + d.decision + (d.comment ? ' (' + d.comment + ')' : '')).join('\\n') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "3f6610e5-ac3b-5728-b6bb-1a28e21218e2",
+      "name": "Mail requester: rejected after review",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2700,
+        400
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "VgSmtpMailpit001",
+          "name": "Mailpit SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "vendor-guard@example.com",
+        "toEmail": "={{ $env.ADMIN_EMAIL }},{{ $('Check request').first().json.requester }}",
+        "subject": "={{ $('Check request').first().json.ref }} has no decision after 48 hours",
+        "emailFormat": "text",
+        "text": "={{ $('Check request').first().json.emailText }}\n\nNobody decided within 48 hours. The vendor stays blocked for payments until someone does.\nCase: {{ $env.VENDOR_GUARD_PUBLIC_URL }}/cases/{{ $('Check request').first().json.caseId }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "30538437-7e30-500a-a16d-96e3ff50dd04",
+      "name": "Escalate: no decision",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2700,
+        580
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "VgSmtpMailpit001",
+          "name": "Mailpit SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Request in": {
+      "main": [
+        [
+          {
+            "node": "Check request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check request": {
+      "main": [
+        [
+          {
+            "node": "Reply 202",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply 202": {
+      "main": [
+        [
+          {
+            "node": "Route by status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by status": {
+      "main": [
+        [
+          {
+            "node": "Mail requester: created",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mail requester: rejected",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Register resume URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register resume URL": {
+      "main": [
+        [
+          {
+            "node": "Case again",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Case again": {
+      "main": [
+        [
+          {
+            "node": "One item per approver",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per approver": {
+      "main": [
+        [
+          {
+            "node": "Mail approver",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mail approver": {
+      "main": [
+        [
+          {
+            "node": "Wait only once",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait only once": {
+      "main": [
+        [
+          {
+            "node": "Wait for decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for decision": {
+      "main": [
+        [
+          {
+            "node": "Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision": {
+      "main": [
+        [
+          {
+            "node": "Mail requester: approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mail requester: rejected after review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Escalate: no decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "VgErrorHandler01",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "pinData": {},
+  "tags": []
+}

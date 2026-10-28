@@ -1,0 +1,61 @@
+# Whole stack on one machine. Expects stammdaten-check next to this folder:
+#   Desktop/stammdaten-check
+#   Desktop/vendor-guard
+services:
+  stammdaten-check:
+    build: ../stammdaten-check
+    environment:
+      STAMMDATEN_API_KEY: ${STAMMDATEN_API_KEY}
+    ports:
+      - "8000:8000"
+    volumes:
+      - stammdaten-data:/data
+
+  vendor-guard:
+    build: .
+    depends_on: [stammdaten-check]
+    environment:
+      STAMMDATEN_URL: http://stammdaten-check:8000
+      STAMMDATEN_API_KEY: ${STAMMDATEN_API_KEY}
+      VENDOR_GUARD_API_KEY: ${VENDOR_GUARD_API_KEY}
+      LINK_SECRET: ${LINK_SECRET}
+      AUDIT_KEY: ${AUDIT_KEY}
+      APPROVERS: ${APPROVERS}
+      PUBLIC_URL: http://localhost:8100
+      SANCTIONS_FILE: /data/eu-sanctions.xml
+    ports:
+      - "8100:8100"
+    volumes:
+      - vendor-guard-data:/data
+
+  n8n:
+    image: n8nio/n8n:2.45.4
+    depends_on: [vendor-guard, mailpit]
+    environment:
+      GENERIC_TIMEZONE: Europe/Berlin
+      TZ: Europe/Berlin
+      # resume URLs must be reachable from the vendor-guard container
+      N8N_WEBHOOK_URL: http://n8n:5678/
+      N8N_SECURE_COOKIE: "false"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      VENDOR_GUARD_URL: http://vendor-guard:8100
+      VENDOR_GUARD_PUBLIC_URL: http://localhost:8100
+      ADMIN_EMAIL: it-betrieb@example.com
+      AUDIT_EMAIL: controlling@example.com
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./n8n:/workflows:ro
+
+  # catches every email the workflows send, web UI on http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  stammdaten-data:
+  vendor-guard-data:
+  n8n-data:

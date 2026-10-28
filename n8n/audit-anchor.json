@@ -1,0 +1,150 @@
+{
+  "id": "VgAuditAnchor001",
+  "name": "Audit anchor",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "VgErrorHandler01"
+  },
+  "pinData": {},
+  "tags": [],
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "id": "b876f172-9ce8-5bb6-817c-c18f22922bf7",
+      "name": "Every evening",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.VENDOR_GUARD_URL }}/api/v1/audit/head",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "ebe0550d-4b9e-5147-8e31-77220c674a0c",
+      "name": "Audit head",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VgApiKeyCred0001",
+          "name": "vendor-guard API key"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.VENDOR_GUARD_URL }}/api/v1/audit/verify",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "7e78c585-2d9e-544a-9eaf-652b8e1a08b2",
+      "name": "Verify chain",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VgApiKeyCred0001",
+          "name": "vendor-guard API key"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "fromEmail": "vendor-guard@example.com",
+        "toEmail": "={{ $env.AUDIT_EMAIL }}",
+        "subject": "={{ $json.ok ? 'vendor-guard audit log intact' : 'ALERT: vendor-guard audit log broken' }}",
+        "emailFormat": "text",
+        "text": "=Checked {{ $json.entries }} entries. Chain {{ $json.ok ? 'intact' : 'broken at entry ' + $json.firstBrokenId }}.\n\nLatest entry: {{ $('Audit head').first().json.id }} at {{ $('Audit head').first().json.at }}\nHash: {{ $('Audit head').first().json.hash }}\n\nKeep this email. If the hash of an old entry ever changes, someone edited the log.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d85715de-366e-594a-a1ca-a1b1b28873a2",
+      "name": "Mail controlling",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        300
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "VgSmtpMailpit001",
+          "name": "Mailpit SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every evening": {
+      "main": [
+        [
+          {
+            "node": "Audit head",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audit head": {
+      "main": [
+        [
+          {
+            "node": "Verify chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify chain": {
+      "main": [
+        [
+          {
+            "node": "Mail controlling",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
