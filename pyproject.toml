@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vendor-guard"
+version = "0.1.0"
+description = "Checks vendor onboarding and bank detail changes before they reach the master data"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Abdallah Aneed" }]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "python-multipart>=0.0.9",
+    "jinja2>=3.1",
+    "httpx>=0.27",
+    "pdfplumber>=0.11",
+    "rapidfuzz>=3.0",
+    "reportlab>=4.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+vendor-guard = "vendor_guard.cli:main"
+
+[tool.setuptools]
+packages = ["vendor_guard"]
+
+[tool.setuptools.package-data]
+vendor_guard = ["templates/*", "static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning:starlette.*"]

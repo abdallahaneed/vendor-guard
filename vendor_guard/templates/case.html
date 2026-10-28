@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ case.ref }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 6px"><a href="/">All cases</a></p>
+<div class="head">
+  <div>
+    <p class="muted" style="margin:0">{{ case.ref }}, {{ case.type.replace("_", " ") }}, {{ case.created_at|when }}</p>
+    <h1>{{ case.request.vendor.name }}</h1>
+  </div>
+  <span class="spacer"></span>
+  <span class="badge st-{{ case.status }}">{{ case.status.replace("_", " ") }}</span>
+</div>
+<section class="card"><div class="card-h"><h2>Request</h2></div>{% include "_bank.html" %}</section>
+<section class="card"><div class="card-h"><h2>What the checks found</h2></div>{% include "_risks.html" %}</section>
+{% set ex = case.extracted.fields %}
+<section class="card">
+  <div class="card-h"><h2>Read from the documents</h2><span class="muted">{{ case.extracted.pages }} page(s)</span></div>
+  {% if ex %}
+  <div class="table-wrap"><table><tbody>
+    {% for k, val in ex.items() %}<tr><th scope="row">{{ k }}</th><td class="mono">{{ val if val is string else val|join(", ") }}{% if case.extracted.confidence.get(k) %} <span class="muted">({{ case.extracted.confidence[k] }})</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="card-b muted">No document or nothing recognised.</div>{% endif %}
+</section>
+<section class="card">
+  <div class="card-h"><h2>Audit trail</h2><a href="/api/v1/audit/verify" class="muted" style="margin-left:auto">verify chain</a></div>
+  <ul class="audit">
+    {% for e in audit %}<li><span class="muted mono">{{ e.at|when }}</span><span>{{ e.actor }}</span><span><strong>{{ e.action.replace("_", " ") }}</strong>{% for k, val in e.data.items() if val not in ("", None, []) %}<span class="muted"> {{ k }}: {{ val if val is string else val|join(", ") if val is iterable and val is not mapping else val }}{% if not loop.last %};{% endif %}</span>{% endfor %}</span></li>{% endfor %}
+  </ul>
+</section>
+{% endblock %}

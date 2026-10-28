@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ case.ref }} approval{% endblock %}
+{% block content %}
+<div class="head">
+  <div>
+    <p class="muted" style="margin:0">{{ case.ref }}, {{ case.type.replace("_", " ") }}</p>
+    <h1>{{ case.request.vendor.name }}</h1>
+  </div>
+  <span class="spacer"></span>
+  <span class="badge st-{{ case.status }}">{{ case.status.replace("_", " ") }}</span>
+</div>
+
+{% if done %}
+<section class="card"><div class="card-b">
+  <p style="margin:0">This link has been used or the case is closed. Status: <strong>{{ case.status.replace("_", " ") }}</strong>.</p>
+</div></section>
+{% else %}
+
+{% if case.type == "bank_change" %}
+<div class="callout" role="note">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>
+  <div>
+    <strong>Before you approve: call the vendor on the number on file.</strong>
+    <div class="phone">{{ (case.current or {}).get("phone") or "no number on file" }}</div>
+    <span class="muted">Not the number in the letter or the email. Ask them to confirm the new IBAN digit by digit.</span>
+  </div>
+</div>
+{% endif %}
+
+{% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+
+<section class="card">
+  <div class="card-h"><h2>Request</h2></div>
+  {% include "_bank.html" %}
+</section>
+
+<section class="card">
+  <div class="card-h"><h2>What the checks found</h2>
+    {% if case.approvals_needed > 1 %}<span class="badge sev-error">two approvers needed</span>{% endif %}
+  </div>
+  {% include "_risks.html" %}
+</section>
+
+{% if case.approvals %}
+<section class="card">
+  <div class="card-h"><h2>Earlier decisions</h2></div>
+  <ul class="audit">{% for a in case.approvals %}<li><span class="muted">{{ a.at|when }}</span><span>{{ a.approver }}</span><span>{{ a.decision }}{% if a.comment %}: {{ a.comment }}{% endif %}</span></li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="card-h"><h2>Your decision</h2><span class="muted">as {{ approver }}</span></div>
+  <form class="card-b" method="post" action="/approvals/{{ token }}">
+    <fieldset class="choices" style="border:0;padding:0;margin:0 0 14px">
+      <legend class="sr-only">Decision</legend>
+      <label class="choice"><input type="radio" name="decision" value="approve" {% if form.decision == "approve" %}checked{% endif %} required> Approve</label>
+      <label class="choice"><input type="radio" name="decision" value="reject" {% if form.decision == "reject" %}checked{% endif %}> Reject</label>
+    </fieldset>
+    {% if case.type == "bank_change" %}
+    <label class="field" for="callback_phone">Number you called
+      <span class="hint">Needed to approve. Must match the number on file.</span>
+      <input type="tel" id="callback_phone" name="callback_phone" value="{{ form.callback_phone or '' }}" autocomplete="off">
+    </label>
+    {% endif %}
+    <label class="field" for="comment">Comment
+      <span class="hint">Needed to reject. The requester reads this.</span>
+      <textarea id="comment" name="comment" maxlength="1000">{{ form.comment or "" }}</textarea>
+    </label>
+    <button class="btn" type="submit">Submit decision</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

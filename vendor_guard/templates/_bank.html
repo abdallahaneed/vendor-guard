@@ -1,0 +1,17 @@
+{% set v = case.request.vendor %}
+<div class="table-wrap"><table>
+  <tbody>
+    <tr><th scope="row">Vendor</th><td>{{ v.name }}{% if case.existing_id %} <span class="mono muted">({{ case.existing_id }})</span>{% endif %}</td></tr>
+    <tr><th scope="row">Address</th><td>{{ v.street }}, {{ v.postalCode }} {{ v.city }}, {{ v.country }}</td></tr>
+    <tr><th scope="row">VAT ID</th><td class="mono">{{ v.vatId or "none" }}</td></tr>
+    {% if case.type == "bank_change" %}
+    <tr><th scope="row">IBAN on file</th><td class="mono">{% for b in (case.current or {}).get("banks", []) %}{{ b.iban }}<br>{% else %}none{% endfor %}</td></tr>
+    <tr><th scope="row">New IBAN</th><td class="mono new">{{ v.iban }}</td></tr>
+    {% else %}
+    <tr><th scope="row">IBAN</th><td class="mono">{{ v.iban }}</td></tr>
+    {% endif %}
+    <tr><th scope="row">Account holder</th><td>{{ v.accountHolder or "not given" }}</td></tr>
+    <tr><th scope="row">Request from</th><td>{{ case.source_email or "unknown" }}</td></tr>
+    <tr><th scope="row">Entered by</th><td>{{ case.requester_name }} ({{ case.requester_email }})</td></tr>
+  </tbody>
+</table></div>

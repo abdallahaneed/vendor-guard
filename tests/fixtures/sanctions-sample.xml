@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Same structure as the EU FSF export (xmlFullSanctionsList_1_1). Names are invented. -->
+<export xmlns="http://eu.europa.ec/fpi/fsd/export" generationDate="2026-10-01T00:00:00">
+  <sanctionEntity logicalId="9001" euReferenceNumber="EU.9001.01">
+    <regulation regulationType="amendment" programme="TEST"/>
+    <subjectType code="enterprise" classificationCode="E"/>
+    <nameAlias wholeName="Nordlicht Handelskontor OOO" nameLanguage="EN"/>
+    <nameAlias wholeName="Nordlicht Trade House" nameLanguage="EN"/>
+  </sanctionEntity>
+  <sanctionEntity logicalId="9002" euReferenceNumber="EU.9002.02">
+    <subjectType code="person" classificationCode="P"/>
+    <nameAlias wholeName="Ivan Testperson" firstName="Ivan" lastName="Testperson"/>
+  </sanctionEntity>
+  <sanctionEntity logicalId="9003" euReferenceNumber="EU.9003.03">
+    <subjectType code="enterprise" classificationCode="E"/>
+    <nameAlias wholeName="M. de Vries Trading B.V."/>
+  </sanctionEntity>
+</export>

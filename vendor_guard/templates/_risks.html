@@ -1,0 +1,12 @@
+{% if case.risks %}
+<ul class="risks">
+  {% for r in case.risks %}
+  <li>
+    <span><span class="badge sev-{{ r.severity }}">{{ r.severity }}</span></span>
+    <div><strong>{{ r.id }} {{ r.title }}</strong><span class="muted">{{ r.detail }}</span></div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="card-b muted">The checks found nothing.</div>
+{% endif %}
