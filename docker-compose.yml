@@ -7,7 +7,7 @@ services:
     environment:
       STAMMDATEN_API_KEY: ${STAMMDATEN_API_KEY}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - stammdaten-data:/data
 
@@ -24,7 +24,7 @@ services:
       PUBLIC_URL: http://localhost:8100
       SANCTIONS_FILE: /data/eu-sanctions.xml
     ports:
-      - "8100:8100"
+      - "127.0.0.1:8100:8100"
     volumes:
       - vendor-guard-data:/data
 
@@ -43,7 +43,7 @@ services:
       ADMIN_EMAIL: it-betrieb@example.com
       AUDIT_EMAIL: controlling@example.com
     ports:
-      - "5678:5678"
+      - "127.0.0.1:5678:5678"
     volumes:
       - n8n-data:/home/node/.n8n
       - ./n8n:/workflows:ro
@@ -52,8 +52,8 @@ services:
   mailpit:
     image: axllent/mailpit:latest
     ports:
-      - "8025:8025"
-      - "1025:1025"
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
 
 volumes:
   stammdaten-data:

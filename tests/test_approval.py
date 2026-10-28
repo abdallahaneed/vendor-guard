@@ -125,3 +125,12 @@ def test_unknown_vendor_and_bad_input(client, requester):
     assert r.status_code == 422
     r = post_case(client, {"type": "onboarding", "requester": {"email": "not-an-email"}})
     assert r.status_code == 422
+
+
+def test_refuses_to_start_with_weak_secrets(settings):
+    for secret in ("", "change-me-link-secret-0123456789abcdef", "short"):
+        settings.link_secret = secret
+        with pytest.raises(SystemExit, match="LINK_SECRET"):
+            settings.check_secrets()
+    settings.link_secret = settings.audit_key = "a" * 64
+    settings.check_secrets()

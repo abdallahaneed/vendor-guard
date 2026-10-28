@@ -63,7 +63,7 @@ Desktop/
 ```
 
 ```bash
-cp .env.example .env        # then change the secrets in .env
+cp .env.example .env        # then set LINK_SECRET and AUDIT_KEY, each from: openssl rand -hex 32
 docker compose up --build
 ```
 
@@ -120,7 +120,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-22 tests: extraction from generated PDFs, every rule, the decision logic, the approval flow (wrong callback number, used links, forged and expired links, reject without reason, two approvers), idempotency, API key, and an audit chain that has been tampered with.
+23 tests: extraction from generated PDFs, every rule, the decision logic, the approval flow (wrong callback number, used links, forged and expired links, reject without reason, two approvers), idempotency, API key, an audit chain that has been tampered with, and refusing to start with weak secrets.
 
 ## Known limitations
 
@@ -129,6 +129,7 @@ pytest
 - The payment run calendar is a weekday rule, not the real F110 schedule.
 - Changes made directly in SAP bypass all of this. In SAP that gap needs dual control on sensitive fields (FK08/FK09).
 - The demo sanctions file in `tests/fixtures` is invented. Use `sanctions-update` for the real list.
+- The case pages and the read endpoints have no login. Docker Compose therefore publishes every port on 127.0.0.1 only, so other machines on the network cannot reach them. The two API keys in `.env.example` are placeholders for a local demo.
 
 ## Layout
 

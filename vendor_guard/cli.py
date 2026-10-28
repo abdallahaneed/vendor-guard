@@ -12,13 +12,16 @@ from .config import Settings
 def cmd_serve(a):
     import uvicorn
     from .app import create_app
+    settings = Settings()
+    settings.check_secrets()
     print(f"vendor-guard on http://{a.host}:{a.port}   API docs: /docs")
-    uvicorn.run(create_app(Settings()), host=a.host, port=a.port, log_level="warning")
+    uvicorn.run(create_app(settings), host=a.host, port=a.port, log_level="warning")
 
 
 def cmd_verify(a):
     from .store import Store
     s = Settings()
+    s.check_secrets()
     ok, n, broken = Store(s.home, s.audit_key).verify_audit()
     print(f"{n} entries, chain {'intact' if ok else f'BROKEN at entry {broken}'}")
     sys.exit(0 if ok else 1)
@@ -27,6 +30,7 @@ def cmd_verify(a):
 def cmd_head(a):
     from .store import Store
     s = Settings()
+    s.check_secrets()
     print(json.dumps(Store(s.home, s.audit_key).audit_head()))
 
 
